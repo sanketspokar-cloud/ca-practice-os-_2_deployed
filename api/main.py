@@ -171,6 +171,75 @@ async def add_invoice(invoice: dict, email: str = None, password: str = None):
     DATA["invoices"].append(invoice)
     return {"message": "Invoice added successfully", "invoice": invoice}
 
+@app.put("/api/clients")
+async def update_client(client: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    client_id = client.get("id")
+    for i, c in enumerate(DATA["clients"]):
+        if c["id"] == client_id:
+            DATA["clients"][i] = client
+            return {"message": "Client updated successfully", "client": client}
+    raise HTTPException(status_code=404, detail="Client not found")
+
+@app.put("/api/tasks")
+async def update_task(task: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    task_id = task.get("id")
+    for i, t in enumerate(DATA["tasks"]):
+        if t["id"] == task_id:
+            DATA["tasks"][i] = task
+            return {"message": "Task updated successfully", "task": task}
+    raise HTTPException(status_code=404, detail="Task not found")
+
+@app.put("/api/compliance")
+async def update_compliance(comp: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    comp_id = comp.get("id")
+    for i, c in enumerate(DATA["compliance"]):
+        if c["id"] == comp_id:
+            DATA["compliance"][i] = comp
+            return {"message": "Compliance task updated successfully", "compliance": comp}
+    raise HTTPException(status_code=404, detail="Compliance task not found")
+
+@app.put("/api/invoices")
+async def update_invoice(invoice: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    invoice_id = invoice.get("id")
+    for i, inv in enumerate(DATA["invoices"]):
+        if inv["id"] == invoice_id:
+            DATA["invoices"][i] = invoice
+            return {"message": "Invoice updated successfully", "invoice": invoice}
+    raise HTTPException(status_code=404, detail="Invoice not found")
+
+@app.delete("/api/tasks")
+async def delete_task(task_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    for i, t in enumerate(DATA["tasks"]):
+        if t["id"] == task_id:
+            deleted = DATA["tasks"].pop(i)
+            return {"message": "Task deleted successfully", "task": deleted}
+    raise HTTPException(status_code=404, detail="Task not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

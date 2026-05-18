@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Icons } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
-import { Avatar } from '../components/Avatar';
-import { getClients, createClient } from '../api';
+import { getClients, createClient, updateClient } from '../api';
+import { downloadSinglePDF } from '../utils/pdf';
 
 const fmt = (n) => "₹" + n.toLocaleString("en-IN");
 
@@ -12,6 +12,7 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState("add"); // "add" | "view" | "edit"
   const [newClient, setNewClient] = useState({
     name: "",
     code: "",
@@ -39,6 +40,42 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
     fetchClients();
   }, []);
 
+  const resetForm = () => {
+    setNewClient({
+      name: "",
+      code: "",
+      entity: "Private Limited",
+      gstin: "",
+      pan: "",
+      status: "active",
+      partner: "Rajesh Kumar",
+      outstanding: 0,
+      tasksDue: 0,
+      industry: "",
+      email: "",
+      phone: "",
+      assigned: "Priya Sharma"
+    });
+  };
+
+  const handleAddClick = () => {
+    setModalMode("add");
+    resetForm();
+    setShowModal(true);
+  };
+
+  const handleEyeClick = (e, client) => {
+    e.stopPropagation();
+    setNewClient(client);
+    setModalMode(adminAuth ? "edit" : "view");
+    setShowModal(true);
+  };
+
+  const handleDownloadPDFClick = (e, client) => {
+    e.stopPropagation();
+    downloadSinglePDF("client", client);
+  };
+
   const handleSaveClient = async (e) => {
     e.preventDefault();
     if (!adminAuth) {
@@ -46,27 +83,18 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
       return;
     }
     try {
-      const res = await createClient(newClient, adminAuth.email, adminAuth.password);
-      setClients([...clients, res.data.client]);
+      if (modalMode === "edit") {
+        const res = await updateClient(newClient, adminAuth.email, adminAuth.password);
+        setClients(clients.map(c => c.id === newClient.id ? res.data.client : c));
+      } else {
+        const res = await createClient(newClient, adminAuth.email, adminAuth.password);
+        setClients([...clients, res.data.client]);
+      }
       setShowModal(false);
-      setNewClient({
-        name: "",
-        code: "",
-        entity: "Private Limited",
-        gstin: "",
-        pan: "",
-        status: "active",
-        partner: "Rajesh Kumar",
-        outstanding: 0,
-        tasksDue: 0,
-        industry: "",
-        email: "",
-        phone: "",
-        assigned: "Priya Sharma"
-      });
+      resetForm();
     } catch (err) {
       console.error(err);
-      alert("Failed to add client");
+      alert(`Failed to ${modalMode === "edit" ? "update" : "add"} client`);
     }
   };
 
@@ -86,7 +114,7 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
           <p style={{ fontSize: 13, color: "#64748B", margin: "4px 0 0" }}>{clients.length} total clients · {clients.filter(c => c.status === "active").length} active</p>
         </div>
         {adminAuth && (
-          <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          <button onClick={handleAddClick} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             <Icons.Plus /> Add Client
           </button>
         )}
@@ -139,10 +167,10 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
                 <td style={{ padding: "12px 16px" }}>
                   {c.tasksDue > 0 ? <span style={{ background: "#FEF3C7", color: "#92400E", padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{c.tasksDue} due</span> : <span style={{ color: "#94A3B8" }}>—</span>}
                 </td>
-                <td style={{ padding: "12px 16px" }}>
+                <td style={{ padding: "12px 16px" }} onClick={e => e.stopPropagation()}>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: 4 }}><Icons.Eye /></button>
-                    <button style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: 4 }}><Icons.Edit /></button>
+                    <button onClick={(e) => handleEyeClick(e, c)} title={adminAuth ? "Edit Client" : "View Client"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1", padding: 4 }}><Icons.Eye /></button>
+                    <button onClick={(e) => handleDownloadPDFClick(e, c)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4 }}><Icons.Download /></button>
                   </div>
                 </td>
               </tr>
@@ -166,66 +194,74 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
             width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>Add New Client</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>
+                {modalMode === "view" ? "View Client Profile" : modalMode === "edit" ? "Edit Client Profile" : "Add New Client"}
+              </h3>
               <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#64748B" }}>&times;</button>
             </div>
             <form onSubmit={handleSaveClient}>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Client Name</label>
-                <input type="text" value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} required
+                <input type="text" value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} required disabled={modalMode === "view"}
                   style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Client Code</label>
-                  <input type="text" value={newClient.code} onChange={e => setNewClient({ ...newClient, code: e.target.value })} required placeholder="CLT-0008"
+                  <input type="text" value={newClient.code} onChange={e => setNewClient({ ...newClient, code: e.target.value })} required placeholder="CLT-0008" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Entity Type</label>
-                  <input type="text" value={newClient.entity} onChange={e => setNewClient({ ...newClient, entity: e.target.value })} required placeholder="e.g. Private Limited, LLP"
+                  <input type="text" value={newClient.entity} onChange={e => setNewClient({ ...newClient, entity: e.target.value })} required placeholder="e.g. Private Limited, LLP" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>PAN</label>
-                  <input type="text" value={newClient.pan} onChange={e => setNewClient({ ...newClient, pan: e.target.value })} required
+                  <input type="text" value={newClient.pan} onChange={e => setNewClient({ ...newClient, pan: e.target.value })} required disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>GSTIN (Optional)</label>
-                  <input type="text" value={newClient.gstin} onChange={e => setNewClient({ ...newClient, gstin: e.target.value })}
+                  <input type="text" value={newClient.gstin} onChange={e => setNewClient({ ...newClient, gstin: e.target.value })} disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Industry</label>
-                  <input type="text" value={newClient.industry} onChange={e => setNewClient({ ...newClient, industry: e.target.value })} required
+                  <input type="text" value={newClient.industry} onChange={e => setNewClient({ ...newClient, industry: e.target.value })} required disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Assigned Manager</label>
-                  <input type="text" value={newClient.assigned} onChange={e => setNewClient({ ...newClient, assigned: e.target.value })} required placeholder="e.g. Priya Sharma"
+                  <input type="text" value={newClient.assigned} onChange={e => setNewClient({ ...newClient, assigned: e.target.value })} required placeholder="e.g. Priya Sharma" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Email</label>
-                  <input type="email" value={newClient.email} onChange={e => setNewClient({ ...newClient, email: e.target.value })} required
+                  <input type="email" value={newClient.email} onChange={e => setNewClient({ ...newClient, email: e.target.value })} required disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Phone</label>
-                  <input type="text" value={newClient.phone} onChange={e => setNewClient({ ...newClient, phone: e.target.value })} required
+                  <input type="text" value={newClient.phone} onChange={e => setNewClient({ ...newClient, phone: e.target.value })} required disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", border: "1px solid #E2E8F0", borderRadius: 6, background: "none", cursor: "pointer", color: "#64748B" }}>Cancel</button>
-                <button type="submit" style={{ padding: "8px 20px", border: "none", borderRadius: 6, background: "#6366F1", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save Client</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", border: "1px solid #E2E8F0", borderRadius: 6, background: "none", cursor: "pointer", color: "#64748B" }}>
+                  {modalMode === "view" ? "Close" : "Cancel"}
+                </button>
+                {modalMode !== "view" && (
+                  <button type="submit" style={{ padding: "8px 20px", border: "none", borderRadius: 6, background: "#6366F1", color: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                    {modalMode === "edit" ? "Save Changes" : "Save Client"}
+                  </button>
+                )}
               </div>
             </form>
           </div>

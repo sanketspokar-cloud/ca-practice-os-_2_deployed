@@ -3,7 +3,8 @@ import { Icons } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
 import { Avatar } from '../components/Avatar';
 import { PriorityDot } from '../components/PriorityDot';
-import { getTasks, createTask, getClients } from '../api';
+import { getTasks, createTask, updateTask, removeTask, getClients } from '../api';
+import { downloadSinglePDF } from '../utils/pdf';
 
 export const TasksPage = ({ adminAuth }) => {
   const [view, setView] = useState("kanban");
@@ -11,6 +12,7 @@ export const TasksPage = ({ adminAuth }) => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState("add"); // "add" | "view" | "edit"
   const [newTask, setNewTask] = useState({
     title: "",
     client: "",
@@ -39,6 +41,55 @@ export const TasksPage = ({ adminAuth }) => {
     fetchData();
   }, []);
 
+  const resetForm = () => {
+    setNewTask({
+      title: "",
+      client: clients[0]?.name || "",
+      status: "todo",
+      priority: "medium",
+      due: "",
+      assignee: "Priya Sharma",
+      type: "GST",
+      checklist: 5,
+      done: 0
+    });
+  };
+
+  const handleAddClick = () => {
+    setModalMode("add");
+    resetForm();
+    setShowModal(true);
+  };
+
+  const handleEyeClick = (e, task) => {
+    e.stopPropagation();
+    setNewTask(task);
+    setModalMode(adminAuth ? "edit" : "view");
+    setShowModal(true);
+  };
+
+  const handleDownloadPDFClick = (e, task) => {
+    e.stopPropagation();
+    downloadSinglePDF("task", task);
+  };
+
+  const handleDeleteTask = async (e, taskId) => {
+    e.stopPropagation();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      try {
+        await removeTask(taskId, adminAuth.email, adminAuth.password);
+        setTasks(tasks.filter(t => t.id !== taskId));
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete task");
+      }
+    }
+  };
+
   const handleSaveTask = async (e) => {
     e.preventDefault();
     if (!adminAuth) {
@@ -46,23 +97,18 @@ export const TasksPage = ({ adminAuth }) => {
       return;
     }
     try {
-      const res = await createTask(newTask, adminAuth.email, adminAuth.password);
-      setTasks([...tasks, res.data.task]);
+      if (modalMode === "edit") {
+        const res = await updateTask(newTask, adminAuth.email, adminAuth.password);
+        setTasks(tasks.map(t => t.id === newTask.id ? res.data.task : t));
+      } else {
+        const res = await createTask(newTask, adminAuth.email, adminAuth.password);
+        setTasks([...tasks, res.data.task]);
+      }
       setShowModal(false);
-      setNewTask({
-        title: "",
-        client: clients[0]?.name || "",
-        status: "todo",
-        priority: "medium",
-        due: "",
-        assignee: "Priya Sharma",
-        type: "GST",
-        checklist: 5,
-        done: 0
-      });
+      resetForm();
     } catch (err) {
       console.error(err);
-      alert("Failed to create task");
+      alert(`Failed to ${modalMode === "edit" ? "update" : "create"} task`);
     }
   };
 
@@ -92,7 +138,7 @@ export const TasksPage = ({ adminAuth }) => {
             ))}
           </div>
           {adminAuth && (
-            <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            <button onClick={handleAddClick} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
               <Icons.Plus /> New Task
             </button>
           )}
@@ -112,12 +158,19 @@ export const TasksPage = ({ adminAuth }) => {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {colTasks.map(t => (
-                    <div key={t.id} style={{ background: "#fff", border: "1px solid #F1F5F9", borderRadius: 10, padding: 14, cursor: "pointer" }}
+                    <div key={t.id} style={{ background: "#fff", border: "1px solid #F1F5F9", borderRadius: 10, padding: 14, cursor: "pointer", position: "relative" }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = "#C7D2FE"}
                       onMouseLeave={e => e.currentTarget.style.borderColor = "#F1F5F9"}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                         <span style={{ fontSize: 10, fontWeight: 600, color: colColors[col] || "#94A3B8", background: colColors[col] + "18", padding: "2px 7px", borderRadius: 10 }}>{t.type}</span>
-                        <PriorityDot priority={t.priority} />
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <PriorityDot priority={t.priority} />
+                          {adminAuth && (
+                            <button onClick={(e) => handleDeleteTask(e, t.id)} title="Delete Task" style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 0 }}>
+                              <Icons.Trash />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "#1E293B", lineHeight: 1.4, marginBottom: 6 }}>{t.title}</div>
                       <div style={{ fontSize: 11, color: "#94A3B8", marginBottom: 10 }}>{t.client}</div>
@@ -131,8 +184,16 @@ export const TasksPage = ({ adminAuth }) => {
                       )}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Avatar name={t.assignee} color="#8B5CF6" size={22} />
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: new Date(t.due) < new Date() && t.status !== "done" ? "#EF4444" : "#94A3B8" }}>
-                          <Icons.Clock />{t.due}
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <button onClick={(e) => handleEyeClick(e, t)} title={adminAuth ? "Edit Task" : "View Task"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1", padding: 0 }}>
+                            <Icons.Eye />
+                          </button>
+                          <button onClick={(e) => handleDownloadPDFClick(e, t)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 0 }}>
+                            <Icons.Download />
+                          </button>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: new Date(t.due) < new Date() && t.status !== "done" ? "#EF4444" : "#94A3B8" }}>
+                            <Icons.Clock />{t.due}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -150,7 +211,7 @@ export const TasksPage = ({ adminAuth }) => {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
-                {["Task", "Client", "Type", "Assignee", "Priority", "Due Date", "Status", "Progress"].map(h => (
+                {["Task", "Client", "Type", "Assignee", "Priority", "Due Date", "Status", "Progress", "Actions"].map(h => (
                   <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: "#64748B", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -173,6 +234,17 @@ export const TasksPage = ({ adminAuth }) => {
                       <span style={{ fontSize: 11, color: "#94A3B8" }}>{t.done}/{t.checklist}</span>
                     </div>
                   </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={(e) => handleEyeClick(e, t)} title={adminAuth ? "Edit Task" : "View Task"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1", padding: 4 }}><Icons.Eye /></button>
+                      <button onClick={(e) => handleDownloadPDFClick(e, t)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4 }}><Icons.Download /></button>
+                      {adminAuth && (
+                        <button onClick={(e) => handleDeleteTask(e, t.id)} title="Delete Task" style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}>
+                          <Icons.Trash />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -192,59 +264,67 @@ export const TasksPage = ({ adminAuth }) => {
             width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>Create New Task</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>
+                {modalMode === "view" ? "View Task Details" : modalMode === "edit" ? "Edit Task Details" : "Create New Task"}
+              </h3>
               <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#64748B" }}>&times;</button>
             </div>
             <form onSubmit={handleSaveTask}>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Task Title</label>
-                <input type="text" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} required
+                <input type="text" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} required disabled={modalMode === "view"}
                   style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
               </div>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Client</label>
-                <input type="text" value={newTask.client} onChange={e => setNewTask({ ...newTask, client: e.target.value })} required placeholder="Client Name"
+                <input type="text" value={newTask.client} onChange={e => setNewTask({ ...newTask, client: e.target.value })} required placeholder="Client Name" disabled={modalMode === "view"}
                   style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Task Type</label>
-                  <input type="text" value={newTask.type} onChange={e => setNewTask({ ...newTask, type: e.target.value })} required placeholder="e.g. GST, TDS, PF"
+                  <input type="text" value={newTask.type} onChange={e => setNewTask({ ...newTask, type: e.target.value })} required placeholder="e.g. GST, TDS, PF" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Priority</label>
-                  <input type="text" value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })} required placeholder="e.g. low, medium, high, urgent"
+                  <input type="text" value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })} required placeholder="e.g. low, medium, high, urgent" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Due Date</label>
-                  <input type="date" value={newTask.due} onChange={e => setNewTask({ ...newTask, due: e.target.value })} required
+                  <input type="date" value={newTask.due} onChange={e => setNewTask({ ...newTask, due: e.target.value })} required disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Assignee</label>
-                  <input type="text" value={newTask.assignee} onChange={e => setNewTask({ ...newTask, assignee: e.target.value })} required placeholder="e.g. Priya Sharma"
+                  <input type="text" value={newTask.assignee} onChange={e => setNewTask({ ...newTask, assignee: e.target.value })} required placeholder="e.g. Priya Sharma" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Status</label>
-                  <input type="text" value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} required placeholder="e.g. todo, in_progress, done"
+                  <input type="text" value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} required placeholder="e.g. todo, in_progress, done" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Checklist Steps</label>
-                  <input type="number" value={newTask.checklist} onChange={e => setNewTask({ ...newTask, checklist: parseInt(e.target.value) || 0 })} required min="1"
+                  <input type="number" value={newTask.checklist} onChange={e => setNewTask({ ...newTask, checklist: parseInt(e.target.value) || 0 })} required min="1" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", border: "1px solid #E2E8F0", borderRadius: 6, background: "none", cursor: "pointer", color: "#64748B" }}>Cancel</button>
-                <button type="submit" style={{ padding: "8px 20px", border: "none", borderRadius: 6, background: "#6366F1", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save Task</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", border: "1px solid #E2E8F0", borderRadius: 6, background: "none", cursor: "pointer", color: "#64748B" }}>
+                  {modalMode === "view" ? "Close" : "Cancel"}
+                </button>
+                {modalMode !== "view" && (
+                  <button type="submit" style={{ padding: "8px 20px", border: "none", borderRadius: 6, background: "#6366F1", color: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                    {modalMode === "edit" ? "Save Changes" : "Save Task"}
+                  </button>
+                )}
               </div>
             </form>
           </div>

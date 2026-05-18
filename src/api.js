@@ -26,4 +26,11 @@ export const createTask = (task, email, password) => api.post('/api/tasks', task
 export const createCompliance = (compliance, email, password) => api.post('/api/compliance', compliance, { params: { email, password } });
 export const createInvoice = (invoice, email, password) => api.post('/api/invoices', invoice, { params: { email, password } });
 
+export const updateClient = (client, email, password) => api.put('/api/clients', client, { params: { email, password } });
+export const updateTask = (task, email, password) => api.put('/api/tasks', task, { params: { email, password } });
+export const updateCompliance = (compliance, email, password) => api.put('/api/compliance', compliance, { params: { email, password } });
+export const updateInvoice = (invoice, email, password) => api.put('/api/invoices', invoice, { params: { email, password } });
+
+export const removeTask = (taskId, email, password) => api.delete('/api/tasks', { params: { task_id: taskId, email, password } });
+
 export default api;

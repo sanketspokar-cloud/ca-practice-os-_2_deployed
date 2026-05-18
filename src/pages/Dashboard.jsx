@@ -4,6 +4,7 @@ import { Icons } from '../components/Icons';
 import { KPICard } from '../components/KPICard';
 import { Avatar } from '../components/Avatar';
 import { getData } from '../api';
+import { downloadDashboardPDF } from '../utils/pdf';
 
 const fmt = (n) => "₹" + n.toLocaleString("en-IN");
 const fmtL = (n) => n >= 100000 ? `₹${(n/100000).toFixed(1)}L` : fmt(n);
@@ -25,6 +26,20 @@ export const Dashboard = () => {
       setLoading(false);
     });
   }, []);
+
+  const handleDownloadDashboardSummary = () => {
+    if (!data) return;
+    const dashboardData = {
+      clientsCount: data.clients.length,
+      tasksCount: data.tasks.length,
+      overdueTasksCount: data.tasks.filter(t => t.status === "todo" || t.status === "backlog").length,
+      pendingComplianceCount: data.compliance.filter(c => c.status !== "done").length,
+      totalOutstanding: 428300,
+      totalRevenue: data.revenue.reduce((acc, curr) => acc + curr.invoiced, 0),
+      team: data.team
+    };
+    downloadDashboardPDF(dashboardData);
+  };
 
   if (loading) return <div style={{ padding: 40 }}>Loading Dashboard...</div>;
 
@@ -59,6 +74,19 @@ export const Dashboard = () => {
 
   return (
     <div style={{ padding:"28px 32px", maxWidth:1200 }}>
+      {/* Title Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", margin: 0 }}>Dashboard</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>Practice management, statistics, and billing overview.</p>
+        </div>
+        <button onClick={handleDownloadDashboardSummary} style={{
+          display: "flex", alignItems: "center", gap: 8, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 4px rgba(99,102,241,0.1)"
+        }}>
+          <Icons.Download /> Download PDF Summary
+        </button>
+      </div>
+
       {/* KPIs */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:16, marginBottom:24 }}>
         <KPICard label="Active Clients" value={data.clients.length} sub="↑ 1 new this month" icon={<Icons.Users/>} accent="#6366F1" trend="up"/>

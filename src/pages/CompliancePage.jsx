@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Icons } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
 import { Avatar } from '../components/Avatar';
-import { getCompliance, createCompliance, getClients } from '../api';
+import { getCompliance, createCompliance, updateCompliance, getClients } from '../api';
+import { downloadSinglePDF } from '../utils/pdf';
 
 export const CompliancePage = ({ adminAuth }) => {
   const [typeFilter, setTypeFilter] = useState("all");
@@ -10,6 +11,7 @@ export const CompliancePage = ({ adminAuth }) => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState("add"); // "add" | "view" | "edit"
   const [newComp, setNewComp] = useState({
     type: "GST",
     client: "",
@@ -36,6 +38,36 @@ export const CompliancePage = ({ adminAuth }) => {
     fetchData();
   }, []);
 
+  const resetForm = () => {
+    setNewComp({
+      type: "GST",
+      client: clients[0]?.name || "",
+      task: "",
+      period: "Apr 2025",
+      due: "",
+      status: "todo",
+      assignee: "PS"
+    });
+  };
+
+  const handleAddClick = () => {
+    setModalMode("add");
+    resetForm();
+    setShowModal(true);
+  };
+
+  const handleEyeClick = (e, item) => {
+    e.stopPropagation();
+    setNewComp(item);
+    setModalMode(adminAuth ? "edit" : "view");
+    setShowModal(true);
+  };
+
+  const handleDownloadPDFClick = (e, item) => {
+    e.stopPropagation();
+    downloadSinglePDF("compliance", item);
+  };
+
   const handleSaveCompliance = async (e) => {
     e.preventDefault();
     if (!adminAuth) {
@@ -43,21 +75,18 @@ export const CompliancePage = ({ adminAuth }) => {
       return;
     }
     try {
-      const res = await createCompliance(newComp, adminAuth.email, adminAuth.password);
-      setCompliance([...compliance, res.data.compliance]);
+      if (modalMode === "edit") {
+        const res = await updateCompliance(newComp, adminAuth.email, adminAuth.password);
+        setCompliance(compliance.map(c => c.id === newComp.id ? res.data.compliance : c));
+      } else {
+        const res = await createCompliance(newComp, adminAuth.email, adminAuth.password);
+        setCompliance([...compliance, res.data.compliance]);
+      }
       setShowModal(false);
-      setNewComp({
-        type: "GST",
-        client: clients[0]?.name || "",
-        task: "",
-        period: "Apr 2025",
-        due: "",
-        status: "todo",
-        assignee: "PS"
-      });
+      resetForm();
     } catch (err) {
       console.error(err);
-      alert("Failed to add compliance task");
+      alert(`Failed to ${modalMode === "edit" ? "update" : "add"} compliance task`);
     }
   };
 
@@ -81,7 +110,7 @@ export const CompliancePage = ({ adminAuth }) => {
           <p style={{ fontSize: 13, color: "#64748B", margin: "4px 0 0" }}>Auto-tracked filing deadlines for all clients</p>
         </div>
         {adminAuth && (
-          <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          <button onClick={handleAddClick} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             <Icons.Plus /> Add Manual Task
           </button>
         )}
@@ -140,10 +169,10 @@ export const CompliancePage = ({ adminAuth }) => {
                   </td>
                   <td style={{ padding: "12px 16px" }}><StatusBadge status={c.status} /></td>
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      {c.status === "done" ? (
-                        <span style={{ fontSize: 11, color: "#22C55E", background: "#D1FAE5", borderRadius: 6, padding: "4px 10px", fontWeight: 600 }}>✓ Filed</span>
-                      ) : (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <button onClick={(e) => handleEyeClick(e, c)} title={adminAuth ? "Edit Task" : "View Task"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1", padding: 0 }}><Icons.Eye /></button>
+                      <button onClick={(e) => handleDownloadPDFClick(e, c)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 0 }}><Icons.Download /></button>
+                      {c.status !== "done" && (
                         <button style={{ fontSize: 11, color: "#6366F1", background: "#EEF2FF", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 600 }}>Mark Filed</button>
                       )}
                     </div>
@@ -170,54 +199,62 @@ export const CompliancePage = ({ adminAuth }) => {
             width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>Add Compliance Task</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>
+                {modalMode === "view" ? "View Compliance Task" : modalMode === "edit" ? "Edit Compliance Task" : "Add Compliance Task"}
+              </h3>
               <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#64748B" }}>&times;</button>
             </div>
             <form onSubmit={handleSaveCompliance}>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Client</label>
-                <input type="text" value={newComp.client} onChange={e => setNewComp({ ...newComp, client: e.target.value })} required placeholder="Client Name"
+                <input type="text" value={newComp.client} onChange={e => setNewComp({ ...newComp, client: e.target.value })} required placeholder="Client Name" disabled={modalMode === "view"}
                   style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Filing Type</label>
-                  <input type="text" value={newComp.type} onChange={e => setNewComp({ ...newComp, type: e.target.value })} required placeholder="e.g. GST, TDS, PF"
+                  <input type="text" value={newComp.type} onChange={e => setNewComp({ ...newComp, type: e.target.value })} required placeholder="e.g. GST, TDS, PF" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Filing Name (Task)</label>
-                  <input type="text" value={newComp.task} onChange={e => setNewComp({ ...newComp, task: e.target.value })} required placeholder="e.g. GSTR-3B"
+                  <input type="text" value={newComp.task} onChange={e => setNewComp({ ...newComp, task: e.target.value })} required placeholder="e.g. GSTR-3B" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Filing Period</label>
-                  <input type="text" value={newComp.period} onChange={e => setNewComp({ ...newComp, period: e.target.value })} required placeholder="e.g. Q4 FY25"
+                  <input type="text" value={newComp.period} onChange={e => setNewComp({ ...newComp, period: e.target.value })} required placeholder="e.g. Q4 FY25" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Due Date</label>
-                  <input type="date" value={newComp.due} onChange={e => setNewComp({ ...newComp, due: e.target.value })} required
+                  <input type="date" value={newComp.due} onChange={e => setNewComp({ ...newComp, due: e.target.value })} required disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Assignee Initials</label>
-                  <input type="text" value={newComp.assignee} onChange={e => setNewComp({ ...newComp, assignee: e.target.value })} required placeholder="e.g. PS, RV, AS"
+                  <input type="text" value={newComp.assignee} onChange={e => setNewComp({ ...newComp, assignee: e.target.value })} required placeholder="e.g. PS, RV, AS" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Status</label>
-                  <input type="text" value={newComp.status} onChange={e => setNewComp({ ...newComp, status: e.target.value })} required placeholder="e.g. todo, done"
+                  <input type="text" value={newComp.status} onChange={e => setNewComp({ ...newComp, status: e.target.value })} required placeholder="e.g. todo, done" disabled={modalMode === "view"}
                     style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", border: "1px solid #E2E8F0", borderRadius: 6, background: "none", cursor: "pointer", color: "#64748B" }}>Cancel</button>
-                <button type="submit" style={{ padding: "8px 20px", border: "none", borderRadius: 6, background: "#6366F1", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save Task</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", border: "1px solid #E2E8F0", borderRadius: 6, background: "none", cursor: "pointer", color: "#64748B" }}>
+                  {modalMode === "view" ? "Close" : "Cancel"}
+                </button>
+                {modalMode !== "view" && (
+                  <button type="submit" style={{ padding: "8px 20px", border: "none", borderRadius: 6, background: "#6366F1", color: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                    {modalMode === "edit" ? "Save Changes" : "Save Task"}
+                  </button>
+                )}
               </div>
             </form>
           </div>
