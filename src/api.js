@@ -7,17 +7,6 @@ const api = axios.create({
   baseURL: cleanBase,
 });
 
-// Interceptor to inject JWT Authorization Token automatically
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
-
 export const getData = () => api.get('/api/data');
 export const getClients = () => api.get('/api/clients');
 export const getTasks = () => api.get('/api/tasks');
@@ -32,19 +21,19 @@ export const verifyCredentials = (email, password) => {
   });
 };
 
-export const createClient = (client) => api.post('/api/clients', client);
-export const createTask = (task) => api.post('/api/tasks', task);
-export const createCompliance = (compliance) => api.post('/api/compliance', compliance);
-export const createInvoice = (invoice) => api.post('/api/invoices', invoice);
+export const createClient = (client, email, password) => api.post('/api/clients', client, { params: { email, password } });
+export const createTask = (task, email, password) => api.post('/api/tasks', task, { params: { email, password } });
+export const createCompliance = (compliance, email, password) => api.post('/api/compliance', compliance, { params: { email, password } });
+export const createInvoice = (invoice, email, password) => api.post('/api/invoices', invoice, { params: { email, password } });
 
-export const updateClient = (client) => api.put('/api/clients', client);
-export const updateTask = (task) => api.put('/api/tasks', task);
-export const updateCompliance = (compliance) => api.put('/api/compliance', compliance);
-export const updateInvoice = (invoice) => api.put('/api/invoices', invoice);
+export const updateClient = (client, email, password) => api.put('/api/clients', client, { params: { email, password } });
+export const updateTask = (task, email, password) => api.put('/api/tasks', task, { params: { email, password } });
+export const updateCompliance = (compliance, email, password) => api.put('/api/compliance', compliance, { params: { email, password } });
+export const updateInvoice = (invoice, email, password) => api.put('/api/invoices', invoice, { params: { email, password } });
 
-export const removeTask = (taskId) => api.delete('/api/tasks', { params: { task_id: taskId } });
-export const removeClient = (clientId) => api.delete('/api/clients', { params: { client_id: clientId } });
-export const removeCompliance = (complianceId) => api.delete('/api/compliance', { params: { comp_id: complianceId } });
-export const removeInvoice = (invoiceId) => api.delete('/api/invoices', { params: { invoice_id: invoiceId } });
+export const removeTask = (taskId, email, password) => api.delete('/api/tasks', { params: { task_id: taskId, email, password } });
+export const removeClient = (clientId, email, password) => api.delete('/api/clients', { params: { client_id: clientId, email, password } });
+export const removeCompliance = (complianceId, email, password) => api.delete('/api/compliance', { params: { comp_id: complianceId, email, password } });
+export const removeInvoice = (invoiceId, email, password) => api.delete('/api/invoices', { params: { invoice_id: invoiceId, email, password } });
 
 export default api;

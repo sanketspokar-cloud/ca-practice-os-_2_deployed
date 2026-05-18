@@ -81,7 +81,7 @@ export const TasksPage = ({ adminAuth }) => {
     }
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
-        await removeTask(taskId);
+        await removeTask(taskId, adminAuth.email, adminAuth.password);
         setTasks(tasks.filter(t => t.id !== taskId));
       } catch (err) {
         console.error(err);
@@ -98,10 +98,10 @@ export const TasksPage = ({ adminAuth }) => {
     }
     try {
       if (modalMode === "edit") {
-        const res = await updateTask(newTask);
+        const res = await updateTask(newTask, adminAuth.email, adminAuth.password);
         setTasks(tasks.map(t => t.id === newTask.id ? res.data.task : t));
       } else {
-        const res = await createTask(newTask);
+        const res = await createTask(newTask, adminAuth.email, adminAuth.password);
         setTasks([...tasks, res.data.task]);
       }
       setShowModal(false);

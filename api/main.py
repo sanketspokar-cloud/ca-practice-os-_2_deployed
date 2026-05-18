@@ -5,86 +5,19 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import json
 import os
-import hmac
-import hashlib
-import base64
-import time
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Allowed CORS Origins (Vercel Production and Localhost Dev)
-allowed_origins = [
-    "https://ca-practice-os-2-deployed.vercel.app",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"], # In production, replace with your Vercel domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# JWT Session Settings
-JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-key-for-practice-os-3982409823")
-
-def base64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
-
-def base64url_decode(data: str) -> bytes:
-    padding = '=' * (4 - (len(data) % 4))
-    return base64.urlsafe_b64decode(data + padding)
-
-def create_jwt(payload: dict) -> str:
-    header = {"alg": "HS256", "typ": "JWT"}
-    header_b64 = base64url_encode(json.dumps(header).encode('utf-8'))
-    payload_b64 = base64url_encode(json.dumps(payload).encode('utf-8'))
-    
-    signing_input = f"{header_b64}.{payload_b64}".encode('utf-8')
-    signature = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
-    signature_b64 = base64url_encode(signature)
-    
-    return f"{header_b64}.{payload_b64}.{signature_b64}"
-
-def verify_jwt(token: str) -> dict:
-    try:
-        parts = token.split('.')
-        if len(parts) != 3:
-            return None
-        
-        header_b64, payload_b64, signature_b64 = parts
-        signing_input = f"{header_b64}.{payload_b64}".encode('utf-8')
-        
-        expected_signature = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
-        expected_signature_b64 = base64url_encode(expected_signature)
-        
-        if not hmac.compare_digest(signature_b64.encode('utf-8'), expected_signature_b64.encode('utf-8')):
-            return None
-            
-        payload = json.loads(base64url_decode(payload_b64).decode('utf-8'))
-        if payload.get("exp") and time.time() > payload["exp"]:
-            return None
-            
-        return payload
-    except Exception:
-        return None
-
-def verify_admin_auth(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized session. Please log in.")
-    
-    token = auth_header.split(" ")[1]
-    payload = verify_jwt(token)
-    if not payload or payload.get("role") != "admin":
-        raise HTTPException(status_code=401, detail="Invalid or expired session. Please log in again.")
-    
-    return payload
 
 # Mock Data (In-memory state for MVP)
 DATA = {
@@ -126,26 +59,30 @@ DATA = {
         { "id":5, "no":"INV/2425/0093", "client":"Mehta & Sons HUF", "date":"2025-05-08", "due":"2025-05-31", "amount":15340, "paid":0, "status":"draft" },
     ],
     "revenue": [
-        { "month":"Jun 24", "invoiced":250000, "collected":210000 },
-        { "month":"Jul 24", "invoiced":280000, "collected":240000 },
-        { "month":"Aug 24", "invoiced":310000, "collected":290000 },
-        { "month":"Sep 24", "invoiced":290000, "collected":270000 },
-        { "month":"Oct 24", "invoiced":350000, "collected":320000 },
-        { "month":"Nov 24", "invoiced":420000, "collected":380000 },
-        { "month":"Dec 24", "invoiced":380000, "collected":360000 },
-        { "month":"Jan 25", "invoiced":390000, "collected":340000 },
-        { "month":"Feb 25", "invoiced":450000, "collected":410000 },
-        { "month":"Mar 25", "invoiced":520000, "collected":490000 },
-        { "month":"Apr 25", "invoiced":380000, "collected":310000 },
-        { "month":"May 25", "invoiced":428300, "collected":120000 },
+        { "month":"Jun", "invoiced":320000, "collected":280000 },
+        { "month":"Jul", "invoiced":410000, "collected":350000 },
+        { "month":"Aug", "invoiced":290000, "collected":310000 },
+        { "month":"Sep", "invoiced":480000, "collected":420000 },
+        { "month":"Oct", "invoiced":520000, "collected":460000 },
+        { "month":"Nov", "invoiced":390000, "collected":380000 },
+        { "month":"Dec", "invoiced":440000, "collected":400000 },
+        { "month":"Jan", "invoiced":510000, "collected":470000 },
+        { "month":"Feb", "invoiced":460000, "collected":490000 },
+        { "month":"Mar", "invoiced":680000, "collected":580000 },
+        { "month":"Apr", "invoiced":420000, "collected":350000 },
+        { "month":"May", "invoiced":180000, "collected":120000 },
     ],
     "team": [
-        { "id":1, "name":"Priya Sharma", "role":"Sr. Consultant", "tasks":15, "done":11, "hours":145, "color":"#6366F1" },
-        { "id":2, "name":"Rahul Verma", "role":"Tax Associate", "tasks":22, "done":14, "hours":160, "color":"#8B5CF6" },
-        { "id":3, "name":"Amit Singh", "role":"Compliance Officer", "tasks":18, "done":9, "hours":135, "color":"#F59E0B" },
-        { "id":4, "name":"Anjali Mehta", "role":"Partner", "tasks":8, "done":6, "hours":80, "color":"#10B981" },
+        { "id":1, "name":"Priya Sharma", "role":"Manager", "initials":"PS", "tasks":12, "done":8, "hours":142, "color":"#8B5CF6" },
+        { "id":2, "name":"Rahul Verma", "role":"Senior", "initials":"RV", "tasks":9, "done":6, "hours":118, "color":"#0EA5E9" },
+        { "id":3, "name":"Amit Singh", "role":"Staff", "initials":"AS", "tasks":7, "done":5, "hours":96, "color":"#F59E0B" },
+        { "id":4, "name":"Divya Patel", "role":"Staff", "initials":"DP", "tasks":6, "done":4, "hours":88, "color":"#EC4899" },
     ]
 }
+
+@app.get("/")
+async def root():
+    return {"status": "success", "message": "CA Practice OS API is running successfully"}
 
 @app.get("/api/data")
 async def get_all_data():
@@ -176,7 +113,7 @@ async def get_team():
     return DATA["team"]
 
 @app.post("/api/verify-credentials")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def verify_credentials(request: Request, email: str = None, password: str = None):
     admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
     admin_password = os.getenv("ADMIN_PASSWORD", "password123")
@@ -184,44 +121,63 @@ async def verify_credentials(request: Request, email: str = None, password: str 
     if email != admin_email or password != admin_password:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    payload = {
-        "email": email,
-        "role": "admin",
-        "exp": time.time() + (30 * 24 * 60 * 60) # 30 Days Expiration Session
-    }
-    token = create_jwt(payload)
-    return {"message": "Credentials verified", "token": token}
+    return {"message": "Credentials verified"}
 
 @app.post("/api/clients")
-async def add_client(client: dict, payload: dict = Depends(verify_admin_auth)):
+async def add_client(client: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     new_id = max([c["id"] for c in DATA["clients"]]) + 1 if DATA["clients"] else 1
     client["id"] = new_id
     DATA["clients"].append(client)
     return {"message": "Client added successfully", "client": client}
 
 @app.post("/api/tasks")
-async def add_task(task: dict, payload: dict = Depends(verify_admin_auth)):
+async def add_task(task: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
     new_id = max([t["id"] for t in DATA["tasks"]]) + 1 if DATA["tasks"] else 1
     task["id"] = new_id
     DATA["tasks"].append(task)
     return {"message": "Task added successfully", "task": task}
 
 @app.post("/api/compliance")
-async def add_compliance(comp: dict, payload: dict = Depends(verify_admin_auth)):
+async def add_compliance(comp: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
     new_id = max([c["id"] for c in DATA["compliance"]]) + 1 if DATA["compliance"] else 1
     comp["id"] = new_id
     DATA["compliance"].append(comp)
     return {"message": "Compliance task added successfully", "compliance": comp}
 
 @app.post("/api/invoices")
-async def add_invoice(invoice: dict, payload: dict = Depends(verify_admin_auth)):
+async def add_invoice(invoice: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
     new_id = max([i["id"] for i in DATA["invoices"]]) + 1 if DATA["invoices"] else 1
     invoice["id"] = new_id
     DATA["invoices"].append(invoice)
     return {"message": "Invoice added successfully", "invoice": invoice}
 
 @app.put("/api/clients")
-async def update_client(client: dict, payload: dict = Depends(verify_admin_auth)):
+async def update_client(client: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     client_id = client.get("id")
     for i, c in enumerate(DATA["clients"]):
         if c["id"] == client_id:
@@ -230,7 +186,12 @@ async def update_client(client: dict, payload: dict = Depends(verify_admin_auth)
     raise HTTPException(status_code=404, detail="Client not found")
 
 @app.put("/api/tasks")
-async def update_task(task: dict, payload: dict = Depends(verify_admin_auth)):
+async def update_task(task: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     task_id = task.get("id")
     for i, t in enumerate(DATA["tasks"]):
         if t["id"] == task_id:
@@ -239,7 +200,12 @@ async def update_task(task: dict, payload: dict = Depends(verify_admin_auth)):
     raise HTTPException(status_code=404, detail="Task not found")
 
 @app.put("/api/compliance")
-async def update_compliance(comp: dict, payload: dict = Depends(verify_admin_auth)):
+async def update_compliance(comp: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     comp_id = comp.get("id")
     for i, c in enumerate(DATA["compliance"]):
         if c["id"] == comp_id:
@@ -248,7 +214,12 @@ async def update_compliance(comp: dict, payload: dict = Depends(verify_admin_aut
     raise HTTPException(status_code=404, detail="Compliance task not found")
 
 @app.put("/api/invoices")
-async def update_invoice(invoice: dict, payload: dict = Depends(verify_admin_auth)):
+async def update_invoice(invoice: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     invoice_id = invoice.get("id")
     for i, inv in enumerate(DATA["invoices"]):
         if inv["id"] == invoice_id:
@@ -257,7 +228,12 @@ async def update_invoice(invoice: dict, payload: dict = Depends(verify_admin_aut
     raise HTTPException(status_code=404, detail="Invoice not found")
 
 @app.delete("/api/tasks")
-async def delete_task(task_id: int, payload: dict = Depends(verify_admin_auth)):
+async def delete_task(task_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     for i, t in enumerate(DATA["tasks"]):
         if t["id"] == task_id:
             deleted = DATA["tasks"].pop(i)
@@ -265,7 +241,12 @@ async def delete_task(task_id: int, payload: dict = Depends(verify_admin_auth)):
     raise HTTPException(status_code=404, detail="Task not found")
 
 @app.delete("/api/clients")
-async def delete_client(client_id: int, payload: dict = Depends(verify_admin_auth)):
+async def delete_client(client_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     for i, c in enumerate(DATA["clients"]):
         if c["id"] == client_id:
             deleted = DATA["clients"].pop(i)
@@ -273,7 +254,12 @@ async def delete_client(client_id: int, payload: dict = Depends(verify_admin_aut
     raise HTTPException(status_code=404, detail="Client not found")
 
 @app.delete("/api/compliance")
-async def delete_compliance(comp_id: int, payload: dict = Depends(verify_admin_auth)):
+async def delete_compliance(comp_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     for i, c in enumerate(DATA["compliance"]):
         if c["id"] == comp_id:
             deleted = DATA["compliance"].pop(i)
@@ -281,7 +267,12 @@ async def delete_compliance(comp_id: int, payload: dict = Depends(verify_admin_a
     raise HTTPException(status_code=404, detail="Compliance task not found")
 
 @app.delete("/api/invoices")
-async def delete_invoice(invoice_id: int, payload: dict = Depends(verify_admin_auth)):
+async def delete_invoice(invoice_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     for i, inv in enumerate(DATA["invoices"]):
         if inv["id"] == invoice_id:
             deleted = DATA["invoices"].pop(i)
@@ -291,3 +282,4 @@ async def delete_invoice(invoice_id: int, payload: dict = Depends(verify_admin_a
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

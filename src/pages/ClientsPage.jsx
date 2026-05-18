@@ -84,7 +84,7 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
     }
     if (window.confirm("Are you sure you want to delete this client?")) {
       try {
-        await removeClient(clientId);
+        await removeClient(clientId, adminAuth.email, adminAuth.password);
         setClients(clients.filter(c => c.id !== clientId));
       } catch (err) {
         console.error(err);
@@ -101,10 +101,10 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
     }
     try {
       if (modalMode === "edit") {
-        const res = await updateClient(newClient);
+        const res = await updateClient(newClient, adminAuth.email, adminAuth.password);
         setClients(clients.map(c => c.id === newClient.id ? res.data.client : c));
       } else {
-        const res = await createClient(newClient);
+        const res = await createClient(newClient, adminAuth.email, adminAuth.password);
         setClients([...clients, res.data.client]);
       }
       setShowModal(false);
