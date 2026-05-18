@@ -4,7 +4,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Avatar } from '../components/Avatar';
 import { getCompliance, createCompliance, getClients } from '../api';
 
-export const CompliancePage = () => {
+export const CompliancePage = ({ adminAuth }) => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [compliance, setCompliance] = useState([]);
   const [clients, setClients] = useState([]);
@@ -25,9 +25,7 @@ export const CompliancePage = () => {
       const [compRes, clientsRes] = await Promise.all([getCompliance(), getClients()]);
       setCompliance(compRes.data);
       setClients(clientsRes.data);
-      if (clientsRes.data.length > 0) {
-        setNewComp(prev => ({ ...prev, client: clientsRes.data[0].name }));
-      }
+      setNewComp(prev => ({ ...prev, client: clientsRes.data[0]?.name || "" }));
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -40,8 +38,12 @@ export const CompliancePage = () => {
 
   const handleSaveCompliance = async (e) => {
     e.preventDefault();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
     try {
-      const res = await createCompliance(newComp);
+      const res = await createCompliance(newComp, adminAuth.email, adminAuth.password);
       setCompliance([...compliance, res.data.compliance]);
       setShowModal(false);
       setNewComp({
@@ -78,9 +80,11 @@ export const CompliancePage = () => {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", margin: 0 }}>Compliance Engine</h2>
           <p style={{ fontSize: 13, color: "#64748B", margin: "4px 0 0" }}>Auto-tracked filing deadlines for all clients</p>
         </div>
-        <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-          <Icons.Plus /> Add Manual Task
-        </button>
+        {adminAuth && (
+          <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            <Icons.Plus /> Add Manual Task
+          </button>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 24 }}>
@@ -172,22 +176,14 @@ export const CompliancePage = () => {
             <form onSubmit={handleSaveCompliance}>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Client</label>
-                <select value={newComp.client} onChange={e => setNewComp({ ...newComp, client: e.target.value })} required
-                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
+                <input type="text" value={newComp.client} onChange={e => setNewComp({ ...newComp, client: e.target.value })} required placeholder="Client Name"
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Filing Type</label>
-                  <select value={newComp.type} onChange={e => setNewComp({ ...newComp, type: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["GST", "TDS", "ITR", "ADV TAX", "ROC", "PF"].map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newComp.type} onChange={e => setNewComp({ ...newComp, type: e.target.value })} required placeholder="e.g. GST, TDS, PF"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Filing Name (Task)</label>
@@ -210,21 +206,13 @@ export const CompliancePage = () => {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Assignee Initials</label>
-                  <select value={newComp.assignee} onChange={e => setNewComp({ ...newComp, assignee: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["PS", "RV", "AS", "DP"].map(o => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newComp.assignee} onChange={e => setNewComp({ ...newComp, assignee: e.target.value })} required placeholder="e.g. PS, RV, AS"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Status</label>
-                  <select value={newComp.status} onChange={e => setNewComp({ ...newComp, status: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["todo", "in_progress", "review", "done"].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newComp.status} onChange={e => setNewComp({ ...newComp, status: e.target.value })} required placeholder="e.g. todo, done"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>

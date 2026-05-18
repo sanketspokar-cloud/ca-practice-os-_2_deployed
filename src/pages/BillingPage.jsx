@@ -7,7 +7,7 @@ import { getInvoices, createInvoice, getClients } from '../api';
 const fmt = (n) => "₹" + n.toLocaleString("en-IN");
 const fmtL = (n) => n >= 100000 ? `₹${(n / 100000).toFixed(1)}L` : fmt(n);
 
-export const BillingPage = () => {
+export const BillingPage = ({ adminAuth }) => {
   const [tab, setTab] = useState("invoices");
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
@@ -28,9 +28,7 @@ export const BillingPage = () => {
       const [invRes, clientsRes] = await Promise.all([getInvoices(), getClients()]);
       setInvoices(invRes.data);
       setClients(clientsRes.data);
-      if (clientsRes.data.length > 0) {
-        setNewInvoice(prev => ({ ...prev, client: clientsRes.data[0].name }));
-      }
+      setNewInvoice(prev => ({ ...prev, client: clientsRes.data[0]?.name || "" }));
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -43,8 +41,12 @@ export const BillingPage = () => {
 
   const handleSaveInvoice = async (e) => {
     e.preventDefault();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
     try {
-      const res = await createInvoice(newInvoice);
+      const res = await createInvoice(newInvoice, adminAuth.email, adminAuth.password);
       setInvoices([...invoices, res.data.invoice]);
       setShowModal(false);
       setNewInvoice({
@@ -76,9 +78,11 @@ export const BillingPage = () => {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", margin: 0 }}>Billing & Collections</h2>
           <p style={{ fontSize: 13, color: "#64748B", margin: "4px 0 0" }}>GST-compliant invoicing and payment tracking</p>
         </div>
-        <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-          <Icons.Plus /> New Invoice
-        </button>
+        {adminAuth && (
+          <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            <Icons.Plus /> New Invoice
+          </button>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 24 }}>
@@ -159,12 +163,8 @@ export const BillingPage = () => {
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Client</label>
-                  <select value={newInvoice.client} onChange={e => setNewInvoice({ ...newInvoice, client: e.target.value })} required
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newInvoice.client} onChange={e => setNewInvoice({ ...newInvoice, client: e.target.value })} required placeholder="Client Name"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -193,12 +193,8 @@ export const BillingPage = () => {
               </div>
               <div style={{ marginBottom: 20 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Status</label>
-                <select value={newInvoice.status} onChange={e => setNewInvoice({ ...newInvoice, status: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                  {["draft", "sent", "paid", "overdue", "partial"].map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                <input type="text" value={newInvoice.status} onChange={e => setNewInvoice({ ...newInvoice, status: e.target.value })} required placeholder="e.g. draft, sent, paid, overdue"
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
                 <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", border: "1px solid #E2E8F0", borderRadius: 6, background: "none", cursor: "pointer", color: "#64748B" }}>Cancel</button>

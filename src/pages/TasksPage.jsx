@@ -5,7 +5,7 @@ import { Avatar } from '../components/Avatar';
 import { PriorityDot } from '../components/PriorityDot';
 import { getTasks, createTask, getClients } from '../api';
 
-export const TasksPage = () => {
+export const TasksPage = ({ adminAuth }) => {
   const [view, setView] = useState("kanban");
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
@@ -28,9 +28,7 @@ export const TasksPage = () => {
       const [tasksRes, clientsRes] = await Promise.all([getTasks(), getClients()]);
       setTasks(tasksRes.data);
       setClients(clientsRes.data);
-      if (clientsRes.data.length > 0) {
-        setNewTask(prev => ({ ...prev, client: clientsRes.data[0].name }));
-      }
+      setNewTask(prev => ({ ...prev, client: clientsRes.data[0]?.name || "" }));
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -43,8 +41,12 @@ export const TasksPage = () => {
 
   const handleSaveTask = async (e) => {
     e.preventDefault();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
     try {
-      const res = await createTask(newTask);
+      const res = await createTask(newTask, adminAuth.email, adminAuth.password);
       setTasks([...tasks, res.data.task]);
       setShowModal(false);
       setNewTask({
@@ -89,9 +91,11 @@ export const TasksPage = () => {
               </button>
             ))}
           </div>
-          <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-            <Icons.Plus /> New Task
-          </button>
+          {adminAuth && (
+            <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              <Icons.Plus /> New Task
+            </button>
+          )}
         </div>
       </div>
 
@@ -199,31 +203,19 @@ export const TasksPage = () => {
               </div>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Client</label>
-                <select value={newTask.client} onChange={e => setNewTask({ ...newTask, client: e.target.value })} required
-                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
+                <input type="text" value={newTask.client} onChange={e => setNewTask({ ...newTask, client: e.target.value })} required placeholder="Client Name"
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Task Type</label>
-                  <select value={newTask.type} onChange={e => setNewTask({ ...newTask, type: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["GST", "TDS", "ITR", "PF", "ADV TAX", "ROC"].map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newTask.type} onChange={e => setNewTask({ ...newTask, type: e.target.value })} required placeholder="e.g. GST, TDS, PF"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Priority</label>
-                  <select value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["low", "medium", "high", "urgent"].map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })} required placeholder="e.g. low, medium, high, urgent"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -234,23 +226,15 @@ export const TasksPage = () => {
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Assignee</label>
-                  <select value={newTask.assignee} onChange={e => setNewTask({ ...newTask, assignee: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["Priya Sharma", "Rahul Verma", "Amit Singh", "Divya Patel"].map(o => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newTask.assignee} onChange={e => setNewTask({ ...newTask, assignee: e.target.value })} required placeholder="e.g. Priya Sharma"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Status</label>
-                  <select value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["backlog", "todo", "in_progress", "review", "done"].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} required placeholder="e.g. todo, in_progress, done"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Checklist Steps</label>

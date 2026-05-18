@@ -15,26 +15,15 @@ export const getInvoices = () => api.get('/api/invoices');
 export const getRevenue = () => api.get('/api/revenue');
 export const getTeam = () => api.get('/api/team');
 
-export const uploadData = (file, email, password) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  return api.post('/api/upload-data', formData, {
-    params: { email, password },
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-};
-
 export const verifyCredentials = (email, password) => {
   return api.post('/api/verify-credentials', null, {
     params: { email, password }
   });
 };
 
-export const createClient = (client) => api.post('/api/clients', client);
-export const createTask = (task) => api.post('/api/tasks', task);
-export const createCompliance = (compliance) => api.post('/api/compliance', compliance);
-export const createInvoice = (invoice) => api.post('/api/invoices', invoice);
+export const createClient = (client, email, password) => api.post('/api/clients', client, { params: { email, password } });
+export const createTask = (task, email, password) => api.post('/api/tasks', task, { params: { email, password } });
+export const createCompliance = (compliance, email, password) => api.post('/api/compliance', compliance, { params: { email, password } });
+export const createInvoice = (invoice, email, password) => api.post('/api/invoices', invoice, { params: { email, password } });
 
 export default api;

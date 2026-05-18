@@ -123,48 +123,49 @@ async def verify_credentials(request: Request, email: str = None, password: str 
     
     return {"message": "Credentials verified"}
 
-@app.post("/api/upload-data")
-@limiter.limit("5/minute")
-async def upload_data(request: Request, file: UploadFile = File(...), email: str = None, password: str = None):
-    # Simple Auth check (use env variables in real setup)
+@app.post("/api/clients")
+async def add_client(client: dict, email: str = None, password: str = None):
     admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
     admin_password = os.getenv("ADMIN_PASSWORD", "password123")
-    
     if email != admin_email or password != admin_password:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    try:
-        contents = await file.read()
-        new_data = json.loads(contents)
-        # For MVP, we just update the in-memory DATA dictionary
-        DATA.update(new_data)
-        return {"message": "Data updated successfully", "keys_updated": list(new_data.keys())}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error parsing data: {str(e)}")
-
-@app.post("/api/clients")
-async def add_client(client: dict):
     new_id = max([c["id"] for c in DATA["clients"]]) + 1 if DATA["clients"] else 1
     client["id"] = new_id
     DATA["clients"].append(client)
     return {"message": "Client added successfully", "client": client}
 
 @app.post("/api/tasks")
-async def add_task(task: dict):
+async def add_task(task: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
     new_id = max([t["id"] for t in DATA["tasks"]]) + 1 if DATA["tasks"] else 1
     task["id"] = new_id
     DATA["tasks"].append(task)
     return {"message": "Task added successfully", "task": task}
 
 @app.post("/api/compliance")
-async def add_compliance(comp: dict):
+async def add_compliance(comp: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
     new_id = max([c["id"] for c in DATA["compliance"]]) + 1 if DATA["compliance"] else 1
     comp["id"] = new_id
     DATA["compliance"].append(comp)
     return {"message": "Compliance task added successfully", "compliance": comp}
 
 @app.post("/api/invoices")
-async def add_invoice(invoice: dict):
+async def add_invoice(invoice: dict, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
     new_id = max([i["id"] for i in DATA["invoices"]]) + 1 if DATA["invoices"] else 1
     invoice["id"] = new_id
     DATA["invoices"].append(invoice)

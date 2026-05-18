@@ -23,7 +23,19 @@ const SidebarLink = ({ to, icon, label, active }) => (
 
 const AppContent = () => {
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [adminAuth, setAdminAuth] = useState(() => {
+    const saved = localStorage.getItem('adminAuth');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleSetAdminAuth = (auth) => {
+    setAdminAuth(auth);
+    if (auth) {
+      localStorage.setItem('adminAuth', JSON.stringify(auth));
+    } else {
+      localStorage.removeItem('adminAuth');
+    }
+  };
 
   const menu = [
     { to: "/", icon: <Icons.Dashboard />, label: "Dashboard" },
@@ -37,14 +49,27 @@ const AppContent = () => {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
       {/* Sidebar */}
       <div style={{ width: 240, borderRight: '1px solid #F1F5F9', background: '#fff', padding: '24px 16px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px 32px' }}>
-          <div style={{ width: 32, height: 32, background: '#6366F1', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-            <Icons.AI />
+        <div style={{ padding: '0 8px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 32, height: 32, background: '#6366F1', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <Icons.AI />
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>Practice OS</span>
           </div>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>Practice OS</span>
+          
+          {/* Status Badge */}
+          {adminAuth ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#D1FAE5', color: '#065F46', padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} /> Admin Mode
+            </div>
+          ) : (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F1F5F9', color: '#475569', padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94A3B8' }} /> Guest Mode
+            </div>
+          )}
         </div>
 
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, marginTop: 16 }}>
           {menu.map(item => (
             <SidebarLink key={item.to} {...item} active={location.pathname === item.to} />
           ))}
@@ -52,13 +77,15 @@ const AppContent = () => {
 
         <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 16 }}>
           <SidebarLink to="/admin/upload" icon={<Icons.Settings />} label="Admin Portal" active={location.pathname === "/admin/upload"} />
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderRadius: 8,
-            width: '100%', border: 'none', background: 'transparent', fontSize: 14, color: '#64748B', cursor: 'pointer'
-          }}>
-            <Icons.LogOut />
-            <span>Sign Out</span>
-          </button>
+          {adminAuth && (
+            <button onClick={() => handleSetAdminAuth(null)} style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderRadius: 8,
+              width: '100%', border: 'none', background: 'transparent', fontSize: 14, color: '#EF4444', cursor: 'pointer', fontWeight: 500
+            }}>
+              <Icons.LogOut />
+              <span>Sign Out Admin</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -71,18 +98,20 @@ const AppContent = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
              <button style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer' }}><Icons.Notifications /></button>
-             <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#6366F1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 }}>PS</div>
+             <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#6366F1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 }}>
+               {adminAuth ? "AD" : "GU"}
+             </div>
           </div>
         </header>
 
         <main>
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/clients" element={<ClientsPage onClientClick={() => {}} />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/compliance" element={<CompliancePage />} />
-            <Route path="/billing" element={<BillingPage />} />
-            <Route path="/admin/upload" element={<AdminUpload />} />
+            <Route path="/clients" element={<ClientsPage onClientClick={() => {}} adminAuth={adminAuth} />} />
+            <Route path="/tasks" element={<TasksPage adminAuth={adminAuth} />} />
+            <Route path="/compliance" element={<CompliancePage adminAuth={adminAuth} />} />
+            <Route path="/billing" element={<BillingPage adminAuth={adminAuth} />} />
+            <Route path="/admin/upload" element={<AdminUpload adminAuth={adminAuth} setAdminAuth={handleSetAdminAuth} />} />
           </Routes>
         </main>
       </div>

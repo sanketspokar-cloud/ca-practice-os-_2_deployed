@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { uploadData, verifyCredentials } from '../api';
+import { verifyCredentials } from '../api';
 
-export const AdminUpload = () => {
+export const AdminUpload = ({ adminAuth, setAdminAuth }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [file, setFile] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
   const handleLogin = async (e) => {
@@ -13,49 +11,41 @@ export const AdminUpload = () => {
     setStatus({ type: 'info', message: 'Verifying credentials...' });
     try {
       await verifyCredentials(email, password);
-      setIsLoggedIn(true);
+      setAdminAuth({ email, password });
       setStatus({ type: '', message: '' });
+      setEmail('');
+      setPassword('');
     } catch (err) {
       setStatus({ type: 'error', message: err.response?.data?.detail || 'Invalid credentials' });
     }
   };
 
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file) return;
-
-    setStatus({ type: 'info', message: 'Uploading...' });
-    try {
-      const res = await uploadData(file, email, password);
-      setStatus({ type: 'success', message: res.data.message });
-      // Clear sensitive metadata after successful upload as requested
-      setFile(null);
-      setEmail('');
-      setPassword('');
-      setIsLoggedIn(false);
-    } catch (err) {
-      setStatus({ type: 'error', message: err.response?.data?.detail || 'Upload failed' });
-    }
+  const handleLogout = () => {
+    setAdminAuth(null);
+    setStatus({ type: 'info', message: 'Logged out successfully' });
   };
 
-  if (!isLoggedIn) {
+  if (!adminAuth) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
-        <form onSubmit={handleLogin} style={{ background: '#fff', padding: 32, borderRadius: 12, border: '1px solid #F1F5F9', width: 320 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, textAlign: 'center' }}>Admin Login</h2>
+        <form onSubmit={handleLogin} style={{ background: '#fff', padding: 32, borderRadius: 12, border: '1px solid #F1F5F9', width: 340, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, textAlign: 'center', color: '#0F172A' }}>Admin Access Portal</h2>
+          <p style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 24 }}>Authenticate to unlock editing & creation actions.</p>
+          
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#64748B', marginBottom: 4 }}>Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required 
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: 6 }} />
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: 6, boxSizing: 'border-box' }} />
           </div>
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#64748B', marginBottom: 4 }}>Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required 
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: 6 }} />
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: 6, boxSizing: 'border-box' }} />
           </div>
           <button type="submit" style={{ width: '100%', padding: 10, background: '#6366F1', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>
-            Login to Upload
+            Verify Credentials
           </button>
+          
           {status.message && (
             <div style={{ marginTop: 20, padding: 12, borderRadius: 6, fontSize: 13, textAlign: 'center',
               background: status.type === 'error' ? '#FEF2F2' : status.type === 'success' ? '#F0FDF4' : '#EFF6FF',
@@ -72,36 +62,29 @@ export const AdminUpload = () => {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
-      <div style={{ background: '#fff', padding: 32, borderRadius: 12, border: '1px solid #F1F5F9', width: 400 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>Upload Data</h2>
-        <p style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 24 }}>Select a JSON file to update the system data.</p>
-        
-        <form onSubmit={handleUpload}>
-          <div style={{ marginBottom: 24, border: '2px dashed #E2E8F0', padding: 40, textAlign: 'center', borderRadius: 12 }}>
-            <input type="file" accept=".json" onChange={e => setFile(e.target.files[0])} required id="file-upload" style={{ display: 'none' }} />
-            <label htmlFor="file-upload" style={{ cursor: 'pointer', color: '#6366F1', fontWeight: 500 }}>
-              {file ? file.name : 'Click to select JSON file'}
-            </label>
-          </div>
+      <div style={{ background: '#fff', padding: 32, borderRadius: 12, border: '1px solid #F1F5F9', width: 420, textAlign: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+        <div style={{ width: 56, height: 56, background: '#D1FAE5', color: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 16px' }}>
+          ✓
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: '#0F172A' }}>Admin Mode Activated</h2>
+        <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.5, marginBottom: 24 }}>
+          You have successfully authenticated as administrator. Editing, additions, and creation dialog actions are now unlocked across all pages!
+        </p>
 
-          <button type="submit" style={{ width: '100%', padding: 12, background: '#6366F1', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>
-            Transfer to Backend
-          </button>
-          
-          <button type="button" onClick={() => setIsLoggedIn(false)} style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: '#64748B', fontSize: 13, cursor: 'pointer' }}>
-            Cancel
-          </button>
-        </form>
-
-        {status.message && (
-          <div style={{ marginTop: 20, padding: 12, borderRadius: 6, fontSize: 13, textAlign: 'center',
-            background: status.type === 'error' ? '#FEF2F2' : status.type === 'success' ? '#F0FDF4' : '#EFF6FF',
-            color: status.type === 'error' ? '#DC2626' : status.type === 'success' ? '#15803D' : '#2563EB',
-            border: `1px solid ${status.type === 'error' ? '#FECACA' : status.type === 'success' ? '#BBF7D0' : '#BFDBFE'}`
-          }}>
-            {status.message}
+        <div style={{ background: '#F8FAFC', borderRadius: 8, padding: 16, marginBottom: 24, border: '1px solid #E2E8F0', textAlign: 'left', fontSize: 13 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ color: '#64748B' }}>Authenticated Role:</span>
+            <strong style={{ color: '#0F172A' }}>System Administrator</strong>
           </div>
-        )}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#64748B' }}>User Email:</span>
+            <strong style={{ color: '#0F172A' }}>{adminAuth.email}</strong>
+          </div>
+        </div>
+
+        <button onClick={handleLogout} style={{ width: '100%', padding: 12, background: '#EF4444', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>
+          Log Out Admin Session
+        </button>
       </div>
     </div>
   );

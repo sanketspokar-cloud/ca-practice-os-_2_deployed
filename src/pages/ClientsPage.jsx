@@ -6,7 +6,7 @@ import { getClients, createClient } from '../api';
 
 const fmt = (n) => "₹" + n.toLocaleString("en-IN");
 
-export const ClientsPage = ({ onClientClick }) => {
+export const ClientsPage = ({ onClientClick, adminAuth }) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [clients, setClients] = useState([]);
@@ -41,8 +41,12 @@ export const ClientsPage = ({ onClientClick }) => {
 
   const handleSaveClient = async (e) => {
     e.preventDefault();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
     try {
-      const res = await createClient(newClient);
+      const res = await createClient(newClient, adminAuth.email, adminAuth.password);
       setClients([...clients, res.data.client]);
       setShowModal(false);
       setNewClient({
@@ -81,9 +85,11 @@ export const ClientsPage = ({ onClientClick }) => {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", margin: 0 }}>Clients</h2>
           <p style={{ fontSize: 13, color: "#64748B", margin: "4px 0 0" }}>{clients.length} total clients · {clients.filter(c => c.status === "active").length} active</p>
         </div>
-        <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-          <Icons.Plus /> Add Client
-        </button>
+        {adminAuth && (
+          <button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "#6366F1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            <Icons.Plus /> Add Client
+          </button>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
@@ -177,12 +183,8 @@ export const ClientsPage = ({ onClientClick }) => {
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Entity Type</label>
-                  <select value={newClient.entity} onChange={e => setNewClient({ ...newClient, entity: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["Private Limited", "Public Limited", "LLP", "Partnership", "Proprietorship", "HUF"].map(o => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newClient.entity} onChange={e => setNewClient({ ...newClient, entity: e.target.value })} required placeholder="e.g. Private Limited, LLP"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -205,12 +207,8 @@ export const ClientsPage = ({ onClientClick }) => {
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, color: "#64748B", marginBottom: 4 }}>Assigned Manager</label>
-                  <select value={newClient.assigned} onChange={e => setNewClient({ ...newClient, assigned: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }}>
-                    {["Priya Sharma", "Rahul Verma", "Amit Singh", "Divya Patel"].map(o => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
+                  <input type="text" value={newClient.assigned} onChange={e => setNewClient({ ...newClient, assigned: e.target.value })} required placeholder="e.g. Priya Sharma"
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 6 }} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
