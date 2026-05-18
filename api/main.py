@@ -142,6 +142,35 @@ async def upload_data(request: Request, file: UploadFile = File(...), email: str
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error parsing data: {str(e)}")
 
+@app.post("/api/clients")
+async def add_client(client: dict):
+    new_id = max([c["id"] for c in DATA["clients"]]) + 1 if DATA["clients"] else 1
+    client["id"] = new_id
+    DATA["clients"].append(client)
+    return {"message": "Client added successfully", "client": client}
+
+@app.post("/api/tasks")
+async def add_task(task: dict):
+    new_id = max([t["id"] for t in DATA["tasks"]]) + 1 if DATA["tasks"] else 1
+    task["id"] = new_id
+    DATA["tasks"].append(task)
+    return {"message": "Task added successfully", "task": task}
+
+@app.post("/api/compliance")
+async def add_compliance(comp: dict):
+    new_id = max([c["id"] for c in DATA["compliance"]]) + 1 if DATA["compliance"] else 1
+    comp["id"] = new_id
+    DATA["compliance"].append(comp)
+    return {"message": "Compliance task added successfully", "compliance": comp}
+
+@app.post("/api/invoices")
+async def add_invoice(invoice: dict):
+    new_id = max([i["id"] for i in DATA["invoices"]]) + 1 if DATA["invoices"] else 1
+    invoice["id"] = new_id
+    DATA["invoices"].append(invoice)
+    return {"message": "Invoice added successfully", "invoice": invoice}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

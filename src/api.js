@@ -31,4 +31,9 @@ export const verifyCredentials = (email, password) => {
   });
 };
 
+export const createClient = (client) => api.post('/api/clients', client);
+export const createTask = (task) => api.post('/api/tasks', task);
+export const createCompliance = (compliance) => api.post('/api/compliance', compliance);
+export const createInvoice = (invoice) => api.post('/api/invoices', invoice);
+
 export default api;
