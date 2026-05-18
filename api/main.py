@@ -80,6 +80,10 @@ DATA = {
     ]
 }
 
+@app.get("/")
+async def root():
+    return {"status": "success", "message": "CA Practice OS API is running successfully"}
+
 @app.get("/api/data")
 async def get_all_data():
     return DATA
