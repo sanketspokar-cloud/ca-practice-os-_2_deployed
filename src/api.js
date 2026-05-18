@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const rawBase = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const cleanBase = rawBase.replace(/\/api\/?$/, '');
 
 const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: cleanBase,
 });
 
 export const getData = () => api.get('/api/data');
