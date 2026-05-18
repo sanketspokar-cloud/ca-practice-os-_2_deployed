@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icons } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
-import { getClients, createClient, updateClient } from '../api';
+import { getClients, createClient, updateClient, removeClient } from '../api';
 import { downloadSinglePDF } from '../utils/pdf';
 
 const fmt = (n) => "₹" + n.toLocaleString("en-IN");
@@ -74,6 +74,23 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
   const handleDownloadPDFClick = (e, client) => {
     e.stopPropagation();
     downloadSinglePDF("client", client);
+  };
+
+  const handleDeleteClient = async (e, clientId) => {
+    e.stopPropagation();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
+    if (window.confirm("Are you sure you want to delete this client?")) {
+      try {
+        await removeClient(clientId, adminAuth.email, adminAuth.password);
+        setClients(clients.filter(c => c.id !== clientId));
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete client");
+      }
+    }
   };
 
   const handleSaveClient = async (e) => {
@@ -171,6 +188,11 @@ export const ClientsPage = ({ onClientClick, adminAuth }) => {
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={(e) => handleEyeClick(e, c)} title={adminAuth ? "Edit Client" : "View Client"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1", padding: 4 }}><Icons.Eye /></button>
                     <button onClick={(e) => handleDownloadPDFClick(e, c)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4 }}><Icons.Download /></button>
+                    {adminAuth && (
+                      <button onClick={(e) => handleDeleteClient(e, c.id)} title="Delete Client" style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}>
+                        <Icons.Trash />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

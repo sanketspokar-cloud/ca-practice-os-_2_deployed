@@ -32,5 +32,8 @@ export const updateCompliance = (compliance, email, password) => api.put('/api/c
 export const updateInvoice = (invoice, email, password) => api.put('/api/invoices', invoice, { params: { email, password } });
 
 export const removeTask = (taskId, email, password) => api.delete('/api/tasks', { params: { task_id: taskId, email, password } });
+export const removeClient = (clientId, email, password) => api.delete('/api/clients', { params: { client_id: clientId, email, password } });
+export const removeCompliance = (complianceId, email, password) => api.delete('/api/compliance', { params: { comp_id: complianceId, email, password } });
+export const removeInvoice = (invoiceId, email, password) => api.delete('/api/invoices', { params: { invoice_id: invoiceId, email, password } });
 
 export default api;

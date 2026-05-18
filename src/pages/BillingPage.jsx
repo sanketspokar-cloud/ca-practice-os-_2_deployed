@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Icons } from '../components/Icons';
 import { KPICard } from '../components/KPICard';
 import { StatusBadge } from '../components/StatusBadge';
-import { getInvoices, createInvoice, updateInvoice, getClients } from '../api';
+import { getInvoices, createInvoice, updateInvoice, removeInvoice, getClients } from '../api';
 import { downloadSinglePDF } from '../utils/pdf';
 
 const fmt = (n) => "₹" + n.toLocaleString("en-IN");
@@ -69,6 +69,23 @@ export const BillingPage = ({ adminAuth }) => {
   const handleDownloadPDFClick = (e, invoice) => {
     e.stopPropagation();
     downloadSinglePDF("invoice", invoice);
+  };
+
+  const handleDeleteInvoice = async (e, invoiceId) => {
+    e.stopPropagation();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
+    if (window.confirm("Are you sure you want to delete this invoice?")) {
+      try {
+        await removeInvoice(invoiceId, adminAuth.email, adminAuth.password);
+        setInvoices(invoices.filter(i => i.id !== invoiceId));
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete invoice");
+      }
+    }
   };
 
   const handleSaveInvoice = async (e) => {
@@ -157,8 +174,13 @@ export const BillingPage = ({ adminAuth }) => {
                   <td style={{ padding: "12px 16px" }}><StatusBadge status={inv.status} /></td>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={(e) => handleEyeClick(e, inv)} title={adminAuth ? "Edit Invoice" : "View Invoice"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1" }}><Icons.Eye /></button>
-                      <button onClick={(e) => handleDownloadPDFClick(e, inv)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B" }}><Icons.Download /></button>
+                      <button onClick={(e) => handleEyeClick(e, inv)} title={adminAuth ? "Edit Invoice" : "View Invoice"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1", padding: 4 }}><Icons.Eye /></button>
+                      <button onClick={(e) => handleDownloadPDFClick(e, inv)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4 }}><Icons.Download /></button>
+                      {adminAuth && (
+                        <button onClick={(e) => handleDeleteInvoice(e, inv.id)} title="Delete Invoice" style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}>
+                          <Icons.Trash />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

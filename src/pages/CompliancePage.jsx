@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Icons } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
 import { Avatar } from '../components/Avatar';
-import { getCompliance, createCompliance, updateCompliance, getClients } from '../api';
+import { getCompliance, createCompliance, updateCompliance, removeCompliance, getClients } from '../api';
 import { downloadSinglePDF } from '../utils/pdf';
 
 export const CompliancePage = ({ adminAuth }) => {
@@ -66,6 +66,23 @@ export const CompliancePage = ({ adminAuth }) => {
   const handleDownloadPDFClick = (e, item) => {
     e.stopPropagation();
     downloadSinglePDF("compliance", item);
+  };
+
+  const handleDeleteCompliance = async (e, compId) => {
+    e.stopPropagation();
+    if (!adminAuth) {
+      alert("Unauthorized action. Please log in as admin.");
+      return;
+    }
+    if (window.confirm("Are you sure you want to delete this compliance task?")) {
+      try {
+        await removeCompliance(compId, adminAuth.email, adminAuth.password);
+        setCompliance(compliance.filter(c => c.id !== compId));
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete compliance task");
+      }
+    }
   };
 
   const handleSaveCompliance = async (e) => {
@@ -172,6 +189,11 @@ export const CompliancePage = ({ adminAuth }) => {
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <button onClick={(e) => handleEyeClick(e, c)} title={adminAuth ? "Edit Task" : "View Task"} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366F1", padding: 0 }}><Icons.Eye /></button>
                       <button onClick={(e) => handleDownloadPDFClick(e, c)} title="Download PDF Summary" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 0 }}><Icons.Download /></button>
+                      {adminAuth && (
+                        <button onClick={(e) => handleDeleteCompliance(e, c.id)} title="Delete Task" style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 0 }}>
+                          <Icons.Trash />
+                        </button>
+                      )}
                       {c.status !== "done" && (
                         <button style={{ fontSize: 11, color: "#6366F1", background: "#EEF2FF", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 600 }}>Mark Filed</button>
                       )}

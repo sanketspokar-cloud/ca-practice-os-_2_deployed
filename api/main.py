@@ -240,6 +240,45 @@ async def delete_task(task_id: int, email: str = None, password: str = None):
             return {"message": "Task deleted successfully", "task": deleted}
     raise HTTPException(status_code=404, detail="Task not found")
 
+@app.delete("/api/clients")
+async def delete_client(client_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    for i, c in enumerate(DATA["clients"]):
+        if c["id"] == client_id:
+            deleted = DATA["clients"].pop(i)
+            return {"message": "Client deleted successfully", "client": deleted}
+    raise HTTPException(status_code=404, detail="Client not found")
+
+@app.delete("/api/compliance")
+async def delete_compliance(comp_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    for i, c in enumerate(DATA["compliance"]):
+        if c["id"] == comp_id:
+            deleted = DATA["compliance"].pop(i)
+            return {"message": "Compliance task deleted successfully", "compliance": deleted}
+    raise HTTPException(status_code=404, detail="Compliance task not found")
+
+@app.delete("/api/invoices")
+async def delete_invoice(invoice_id: int, email: str = None, password: str = None):
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+    if email != admin_email or password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    for i, inv in enumerate(DATA["invoices"]):
+        if inv["id"] == invoice_id:
+            deleted = DATA["invoices"].pop(i)
+            return {"message": "Invoice deleted successfully", "invoice": deleted}
+    raise HTTPException(status_code=404, detail="Invoice not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
