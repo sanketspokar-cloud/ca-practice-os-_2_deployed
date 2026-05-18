@@ -79,7 +79,7 @@ export const BillingPage = ({ adminAuth }) => {
     }
     if (window.confirm("Are you sure you want to delete this invoice?")) {
       try {
-        await removeInvoice(invoiceId, adminAuth.email, adminAuth.password);
+        await removeInvoice(invoiceId);
         setInvoices(invoices.filter(i => i.id !== invoiceId));
       } catch (err) {
         console.error(err);
@@ -96,10 +96,10 @@ export const BillingPage = ({ adminAuth }) => {
     }
     try {
       if (modalMode === "edit") {
-        const res = await updateInvoice(newInvoice, adminAuth.email, adminAuth.password);
+        const res = await updateInvoice(newInvoice);
         setInvoices(invoices.map(i => i.id === newInvoice.id ? res.data.invoice : i));
       } else {
-        const res = await createInvoice(newInvoice, adminAuth.email, adminAuth.password);
+        const res = await createInvoice(newInvoice);
         setInvoices([...invoices, res.data.invoice]);
       }
       setShowModal(false);

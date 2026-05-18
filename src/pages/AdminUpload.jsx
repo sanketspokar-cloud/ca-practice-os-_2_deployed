@@ -10,8 +10,9 @@ export const AdminUpload = ({ adminAuth, setAdminAuth }) => {
     e.preventDefault();
     setStatus({ type: 'info', message: 'Verifying credentials...' });
     try {
-      await verifyCredentials(email, password);
-      setAdminAuth({ email, password });
+      const res = await verifyCredentials(email, password);
+      const token = res.data.token;
+      setAdminAuth(token);
       setStatus({ type: '', message: '' });
       setEmail('');
       setPassword('');
@@ -77,8 +78,8 @@ export const AdminUpload = ({ adminAuth, setAdminAuth }) => {
             <strong style={{ color: '#0F172A' }}>System Administrator</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#64748B' }}>User Email:</span>
-            <strong style={{ color: '#0F172A' }}>{adminAuth.email}</strong>
+            <span style={{ color: '#64748B' }}>Session Status:</span>
+            <strong style={{ color: '#10B981' }}>Active (JWT Validated)</strong>
           </div>
         </div>
 

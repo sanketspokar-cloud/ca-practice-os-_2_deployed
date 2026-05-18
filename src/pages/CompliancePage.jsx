@@ -76,7 +76,7 @@ export const CompliancePage = ({ adminAuth }) => {
     }
     if (window.confirm("Are you sure you want to delete this compliance task?")) {
       try {
-        await removeCompliance(compId, adminAuth.email, adminAuth.password);
+        await removeCompliance(compId);
         setCompliance(compliance.filter(c => c.id !== compId));
       } catch (err) {
         console.error(err);
@@ -93,10 +93,10 @@ export const CompliancePage = ({ adminAuth }) => {
     }
     try {
       if (modalMode === "edit") {
-        const res = await updateCompliance(newComp, adminAuth.email, adminAuth.password);
+        const res = await updateCompliance(newComp);
         setCompliance(compliance.map(c => c.id === newComp.id ? res.data.compliance : c));
       } else {
-        const res = await createCompliance(newComp, adminAuth.email, adminAuth.password);
+        const res = await createCompliance(newComp);
         setCompliance([...compliance, res.data.compliance]);
       }
       setShowModal(false);
